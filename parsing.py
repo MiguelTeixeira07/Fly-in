@@ -1,0 +1,177 @@
+from collections.abc import Callable
+from typing import Optional as Opt
+
+
+class ParsingError(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
+class Parse:
+    METADATA: tuple[str, str, str] = (
+        'zone',
+        'color',
+        'max_link_capacity'
+    )
+
+    ZONES: tuple[str, str, str, str] = (
+        'normal',
+        'blocked',
+        'restricted',
+        'priotiry',
+    )
+
+    COLORS: tuple[str, str, str] = (
+        'red',
+        'green',
+        'blue',
+        'yellow',
+        'gray'
+    )
+
+
+    @classmethod
+    def main_parser(
+        cls,
+        file_name: str
+    ) -> list[
+        dict[str, str | int,
+        list[str, Opt[tuple[int, int]], list[Opt[str | int]]]]
+    ]:
+        FLAGS: dict[str, Callable[['Parse', str], str]] = {
+            'nb_drones': cls.parse_nb_drones,
+            'start_hub': cls.general_parse,
+            'end_hub': cls.general_parse,
+            'hub': cls.general_parse,
+            'connection': cls.connection_parse
+        }
+
+        output: dict[
+            str,
+            list[str | int, Opt[tuple[int, int]], dict[str, str | int]]
+        ] = {}
+
+        line_nbr: int = 0
+        i: int = 0
+        with open(file_name, 'r') as file:
+            for line in file:
+                line_nbr += 1
+                if line == '\n' or line[0] == '#':
+                    continue
+                if line_nbr == 1:
+                    cls.parse_nb_drones(line)
+                    continue
+                raw_line: str = line
+                line = line.strip().strip('\n')
+                split_line:str = line.split(' ')
+                split_line[0] = split_line[0].strip(':')
+
+                line_is_valid: bool = cls.validate_line(line_nbr, raw_line)[0]
+                err_msg: str = cls.validate_line(line_nbr, raw_line)[1]
+
+                if not line_is_valid:
+                    raise ParsingError(f'Invalid syntax in line {line_nbr}: {err_msg}')
+
+                output[i] = {split_line[0]: FLAGS[split_line[0]](line)}
+                i += 1
+
+        return output
+
+    @classmethod
+    def parse_nb_drones(
+        cls,
+        line: str
+    ) -> list[int, list[None]]:
+        line = line.strip().strip('\n')
+        line = line.split(' ')
+
+        nbr_drones: int = int(line[1])
+
+        return [nbr_drones, []]
+
+    @classmethod
+    def general_parse(
+        cls,
+        line: str
+    ) -> list[str, tuple[int, int], dict[str, str | int]]:
+        line = line.strip().strip('\n')
+        split_line: str = line.split(' ')
+        metadata: dict[str, str | int] = {}
+        name: str = split_line[1]
+
+        x, y = (split_line[2], split_line[3])
+
+        if len(split_line) == 5:
+            metadata: dict[str, str | int] = cls.metadata_parse(split_line[4])
+
+        return [name, (x, y), metadata]
+
+    @classmethod
+    def connection_parse(
+        cls,
+        line: str
+    ) -> list[str, Opt[tuple[int, int]], dict[str, str | int]]:
+        line = line.strip().strip('\n')
+        split_line: list[str] = line.split(' ')
+        metadata: dict[str, str | int] = {}
+
+        if len(split_line) > 3 or len(split_line) < 2:
+            raise ParsingError('1')
+        
+        names: str = split_line[1].split('-')
+        if len(names) > 2:
+            raise ParsingError('2')
+        
+        if len(split_line) > 2:
+            metadata = cls.metadata_parse(split_line[2])
+        
+        return [split_line[1], None, metadata]
+
+    @classmethod
+    def metadata_parse(cls, raw_metadata: str) -> dict[str, str | int]:
+        raw_metadata = raw_metadata.strip('[]')
+        split_metadata: list[str] = raw_metadata.split(' ')
+        metadata: dict[str, str | int] = {}
+
+        for data in split_metadata:
+            tag, value = data.split('=')
+
+            if tag not in cls.METADATA:
+                raise ParsingError('3')
+
+            match tag:
+                case 'zone':
+                    if value not in cls.ZONES:
+                        raise ParsingError('4')
+                    metadata[tag] = value
+                case 'color':
+                    if value not in cls.COLORS:
+                        raise ParsingError('5')
+                    metadata[tag] = value
+                case 'max_drones':
+                    if not value.isdigit():
+                        raise ParsingError('6')
+                    metadata[tag] = int(value)
+
+        return metadata
+
+    @classmethod
+    def validate_line(cls, line_nbr: int, raw_line: str) -> tuple[bool, str]:
+        split_line: list[str] = raw_line.split(' ')
+        metadata_start: int = 0
+        count: int = 0
+        for thing in split_line:
+            if '[' in thing:
+                metadata_start = count
+                break
+            count += 1
+
+        metadata: str = raw_line.split(' ')[metadata_start]
+        for thing in split_line[metadata_start:]:
+            metadata += ' ' + thing
+
+        if metadata_start != 0 and not (metadata[0] == '[' and metadata[-2] == ']'):
+            print(metadata, metadata[-2])
+            return (False, 'Metadata needs to be enclosed in brackets "[]"')
+        return (True, '')
