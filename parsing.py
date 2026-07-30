@@ -9,17 +9,43 @@ class ParsingError(Exception):
 
 
 class Parse:
+    class Hub:
+        def __init__(
+            self,
+            name: str,
+            coords: tuple[int, int],
+            metadata: dict[str, str | int]
+        ) -> None:
+            self.name: str = name
+            self.x_pos, self.y_pos = coords
+            if 'zone' in metadata.keys():
+                self.zone_type: str = metadata['zone']
+            else:
+                self.zone_type: str = 'normal'
+
+    class Connection:
+        def __init__(
+            self,
+            connection: str,
+            metadata: dict[str, str | int]
+        ):
+            self.connection: str = connection
+            if 'max_link_capacity' in metadata.keys():
+                self.max_link_capacity = metadata['max_link_capacity']
+
+
     METADATA: tuple[str, str, str] = (
         'zone',
         'color',
-        'max_link_capacity'
+        'max_link_capacity',
+        'max_drones',
     )
 
     ZONES: tuple[str, str, str, str] = (
         'normal',
         'blocked',
         'restricted',
-        'priotiry',
+        'priority',
     )
 
     COLORS: tuple[str, str, str] = (
@@ -30,15 +56,11 @@ class Parse:
         'gray'
     )
 
-
     @classmethod
     def main_parser(
         cls,
         file_name: str
-    ) -> list[
-        dict[str, str | int,
-        list[str, Opt[tuple[int, int]], list[Opt[str | int]]]]
-    ]:
+    ) -> list[int, 'Parse.Hub', 'Parse.Connection']:
         FLAGS: dict[str, Callable[['Parse', str], str]] = {
             'nb_drones': cls.parse_nb_drones,
             'start_hub': cls.general_parse,
@@ -47,10 +69,7 @@ class Parse:
             'connection': cls.connection_parse
         }
 
-        output: dict[
-            str,
-            list[str | int, Opt[tuple[int, int]], dict[str, str | int]]
-        ] = {}
+        output: list[int, 'Parse.Hub', 'Parse.Connection'] = []
 
         line_nbr: int = 0
         i: int = 0
@@ -73,7 +92,7 @@ class Parse:
                 if not line_is_valid:
                     raise ParsingError(f'Invalid syntax in line {line_nbr}: {err_msg}')
 
-                output[i] = {split_line[0]: FLAGS[split_line[0]](line)}
+                output.append(FLAGS[split_line[0]](line))
                 i += 1
 
         return output
@@ -82,19 +101,19 @@ class Parse:
     def parse_nb_drones(
         cls,
         line: str
-    ) -> list[int, list[None]]:
+    ) -> int:
         line = line.strip().strip('\n')
         line = line.split(' ')
 
         nbr_drones: int = int(line[1])
 
-        return [nbr_drones, []]
+        return nbr_drones
 
     @classmethod
     def general_parse(
         cls,
         line: str
-    ) -> list[str, tuple[int, int], dict[str, str | int]]:
+    ) -> 'Parse.Hub':
         line = line.strip().strip('\n')
         split_line: str = line.split(' ')
         metadata: dict[str, str | int] = {}
@@ -102,10 +121,10 @@ class Parse:
 
         x, y = (split_line[2], split_line[3])
 
-        if len(split_line) == 5:
-            metadata: dict[str, str | int] = cls.metadata_parse(split_line[4])
+        if len(split_line) >= 5:
+            metadata: dict[str, str | int] = cls.metadata_parse(' '.join(split_line[4:]))
 
-        return [name, (x, y), metadata]
+        return cls.Hub(name, (x, y), metadata)
 
     @classmethod
     def connection_parse(
@@ -123,10 +142,10 @@ class Parse:
         if len(names) > 2:
             raise ParsingError('2')
         
-        if len(split_line) > 2:
-            metadata = cls.metadata_parse(split_line[2])
+        if len(split_line) >= 3:
+            metadata = cls.metadata_parse(' '.join(split_line[2:]))
         
-        return [split_line[1], None, metadata]
+        return cls.Connection(split_line[1], metadata)
 
     @classmethod
     def metadata_parse(cls, raw_metadata: str) -> dict[str, str | int]:
@@ -142,6 +161,7 @@ class Parse:
 
             match tag:
                 case 'zone':
+                    #print(tag)
                     if value not in cls.ZONES:
                         raise ParsingError('4')
                     metadata[tag] = value
@@ -152,6 +172,10 @@ class Parse:
                 case 'max_drones':
                     if not value.isdigit():
                         raise ParsingError('6')
+                    metadata[tag] = int(value)
+                case 'max_link_capacity':
+                    if not value.isdigit():
+                        raise ParsingError('7')
                     metadata[tag] = int(value)
 
         return metadata

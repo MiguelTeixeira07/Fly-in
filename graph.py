@@ -24,14 +24,12 @@ class Graph:
             zone_types: list[str],
             connections: list[str]
         ) -> None:
-        nodes: list['Graph.Node'] = []
-        get_node_by_name: Callable[[str], 'Graph.Node'] = lambda name: next(
-            nodes[(i for i, node in enumerate(nodes) if node.name == name)]
-        )
+        self.nodes: list['Graph.Node'] = []
+        get_node_by_name: Callable[[str], 'Graph.Node'] = lambda name: self.nodes[next(i for i, node in enumerate(self.nodes) if node.name == name)]
 
-        for name, zone_type in names, zone_types:
+        for name, zone_type in zip(names, zone_types):
             new_node = Graph.Node(name, zone_type)
-            nodes.append(new_node)
+            self.nodes.append(new_node)
 
         for connection in connections:
             node1_name, node2_name = connection.split('-')
