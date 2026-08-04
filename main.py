@@ -1,5 +1,6 @@
 from parsing import Parse, ParsingError
 from graph import Graph
+from solution import Solution
 
 
 def main() -> None:
@@ -17,15 +18,26 @@ def main() -> None:
         if isinstance(element, Parse.Hub):
             names.append(element.name)
             zone_types.append(element.zone_type)
+            if element.is_start:
+                start: str = element.name
+            if element.is_goal:
+                goal: str = element.name
         if isinstance(element, Parse.Connection):
             connections.append(element.connection)
 
-    graph = Graph(names, zone_types, connections)
+    graph = Graph(names, zone_types, connections, start, goal)
 
     for node in graph.nodes:
-        print(node.name)
+        print(node.name, '-', node.weight)
         if node.connections:
-            print(node.connections[0].name, node.connections[1].name, sep='-', end='\n\n')
+            print(' | '.join([n.name for n in node.connections]), end='\n\n')
+
+    solution: list[Graph.Node] = Solution.shortest_path(graph)
+
+    print('\nsolution:')
+    for node in solution:
+        print(node.name, end=' ')
+    print(f'| Total weight: {Solution.get_weight_sum(solution)}')
 
 
 if __name__ == '__main__':

@@ -22,7 +22,9 @@ class Graph:
             self,
             names: list[str],
             zone_types: list[str],
-            connections: list[str]
+            connections: list[str],
+            start: str,
+            goal: str
         ) -> None:
         self.nodes: list['Graph.Node'] = []
         get_node_by_name: Callable[[str], 'Graph.Node'] = lambda name: self.nodes[next(i for i, node in enumerate(self.nodes) if node.name == name)]
@@ -37,3 +39,6 @@ class Graph:
             node2 = get_node_by_name(node2_name)
             node1.connections.append(node2)
             node2.connections.append(node1)
+
+        self.start: Graph.Node = get_node_by_name(start)
+        self.goal: Graph.Node = get_node_by_name(goal)

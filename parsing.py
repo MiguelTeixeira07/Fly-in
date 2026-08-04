@@ -14,14 +14,24 @@ class Parse:
             self,
             name: str,
             coords: tuple[int, int],
-            metadata: dict[str, str | int]
+            metadata: dict[str, str | int],
+            is_start: bool,
+            is_goal: bool
         ) -> None:
             self.name: str = name
             self.x_pos, self.y_pos = coords
+            self.is_start = False
+            self.is_goal = False
+
             if 'zone' in metadata.keys():
                 self.zone_type: str = metadata['zone']
             else:
                 self.zone_type: str = 'normal'
+
+            if is_start:
+                self.is_start = True
+            if is_goal:
+                self.is_goal = True
 
     class Connection:
         def __init__(
@@ -31,7 +41,9 @@ class Parse:
         ):
             self.connection: str = connection
             if 'max_link_capacity' in metadata.keys():
-                self.max_link_capacity = metadata['max_link_capacity']
+                self.max_link_capacity: int = metadata['max_link_capacity']
+            else:
+                self.max_link_capacity: int = 1
 
 
     METADATA: tuple[str, str, str] = (
@@ -118,19 +130,21 @@ class Parse:
         split_line: str = line.split(' ')
         metadata: dict[str, str | int] = {}
         name: str = split_line[1]
+        is_start: bool = 'start_hub' in split_line[0]
+        is_goal: bool = 'end_hub' in split_line[0]
 
         x, y = (split_line[2], split_line[3])
 
         if len(split_line) >= 5:
             metadata: dict[str, str | int] = cls.metadata_parse(' '.join(split_line[4:]))
 
-        return cls.Hub(name, (x, y), metadata)
+        return cls.Hub(name, (x, y), metadata, is_start, is_goal)
 
     @classmethod
     def connection_parse(
         cls,
         line: str
-    ) -> list[str, Opt[tuple[int, int]], dict[str, str | int]]:
+    ) -> 'Parse.Connection':
         line = line.strip().strip('\n')
         split_line: list[str] = line.split(' ')
         metadata: dict[str, str | int] = {}
