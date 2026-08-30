@@ -27,6 +27,10 @@ class Parse:
                 self.zone_type: str = metadata['zone']
             else:
                 self.zone_type: str = 'normal'
+            if 'max_drones' in metadata.keys():
+                self.max_drones: int = metadata['max_drones']
+            else:
+                self.max_drones: int = 1
 
             if is_start:
                 self.is_start = True
@@ -65,7 +69,20 @@ class Parse:
         'green',
         'blue',
         'yellow',
-        'gray'
+        'gray',
+        'orange',
+        'cyan',
+        'purple',
+        'brown',
+        'magenta',
+        'lime',
+        'gold',
+        'black',
+        'maroon',
+        'darkred',
+        'violet',
+        'crimson',
+        'rainbow'
     )
 
     @classmethod
@@ -133,7 +150,7 @@ class Parse:
         is_start: bool = 'start_hub' in split_line[0]
         is_goal: bool = 'end_hub' in split_line[0]
 
-        x, y = (split_line[2], split_line[3])
+        x, y = (int(split_line[2]), int(split_line[3]))
 
         if len(split_line) >= 5:
             metadata: dict[str, str | int] = cls.metadata_parse(' '.join(split_line[4:]))
@@ -181,6 +198,7 @@ class Parse:
                     metadata[tag] = value
                 case 'color':
                     if value not in cls.COLORS:
+                        print(value)
                         raise ParsingError('5')
                     metadata[tag] = value
                 case 'max_drones':
