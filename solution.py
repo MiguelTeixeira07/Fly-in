@@ -1,8 +1,20 @@
+from typing import Optional as Opt
 from graph import Graph
 from collections import deque
 
 
 class Solution:
+    class Path:
+        root: Opt[Graph.Node] = None
+
+        def __init__(self, data: Graph.Node):
+            self.node: Graph.Node = data
+            self.next: list[Graph.Node] = []
+            
+            if Solution.Path.root is None:
+                Solution.Path.root = self.node
+
+
     @staticmethod
     def breadth_first_search(graph: Graph) -> list[Graph.Node]:
         start: Graph.Node = graph.start
@@ -40,34 +52,45 @@ class Solution:
 
     @staticmethod
     def path(graph: Graph) -> list[Graph.Node]:
-        shortest_length: int = Solution.get_weight_sum(Solution.breadth_first_search(graph))
-        start: Graph.Node = graph.start
-        
-        queue: list[tuple[Graph.Node, list[Graph.Node]]] = []
-        visited: dict[Graph.Node, int] = {}
-        definite_path: list[Graph.Node] = []
+        shortest_length = Solution.get_weight_sum(
+            Solution.breadth_first_search(graph)
+        )
 
-        queue.append((start, [start]))
+        start = graph.start
 
-        path_weight: int = 0
+        queue = [(start, [start])]
+        paths = []
 
         while queue:
-            node, path = queue.pop()
-            visited[node] = Solution.get_weight_sum(path)
-            path_weight += node.weight
-            if node == graph.goal and Solution.get_weight_sum(path) <= shortest_length:
-                definite_path = path
+            node, current_path = queue.pop()
 
-            for candidate in node.connections:
-                if (
-                    candidate[0] not in visited.keys() or
-                    (candidate[0] in visited.keys() and
-                    Solution.get_weight_sum(path + [candidate[0]]) < visited[candidate[0]]) and
-                    Solution.get_weight_sum(path) < shortest_length
-                ):
-                    queue.append((
-                        candidate[0],
-                        path + [candidate[0]],
-                    ))
+            current_weight = Solution.get_weight_sum(current_path)
 
-        return definite_path
+            if current_weight > shortest_length:
+                continue
+
+            if node == graph.goal:
+                if current_weight == shortest_length:
+                    paths.append(current_path)
+                continue
+
+            for connection in node.connections:
+                candidate = connection[0]
+
+                # Don't revisit nodes already in this path
+                if candidate in current_path:
+                    continue
+
+                new_path = current_path + [candidate]
+
+                if Solution.get_weight_sum(new_path) <= shortest_length:
+                    queue.append((candidate, new_path))
+
+        allowed = []
+
+        for current_path in paths:
+            for node in current_path:
+                if node not in allowed:
+                    allowed.append(node)
+
+        return allowed

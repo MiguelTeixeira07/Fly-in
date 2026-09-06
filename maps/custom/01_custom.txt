@@ -1,0 +1,15 @@
+nb_drones: 9
+
+start_hub: start 0 0
+hub: divide1 1 -1
+hub: divide2 1 0
+hub: divide3 1 1
+end_hub: goal 2 0
+
+connection: start-divide1
+connection: start-divide2
+connection: start-divide3
+
+connection: goal-divide1
+connection: goal-divide2
+connection: goal-divide3

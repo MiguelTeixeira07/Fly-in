@@ -7,7 +7,7 @@ from simulation import Simulation
 
 def main() -> None:
     try:
-        data: list[int | 'Parse.Hub' | 'Parse.Connection'] = Parse.main_parser('maps/hard/01_maze_nightmare.txt')
+        data: list[int | 'Parse.Hub' | 'Parse.Connection'] = Parse.main_parser('maps/custom/01_custom.txt')
     except ParsingError as e:
         print(e)
         return
@@ -23,6 +23,7 @@ def main() -> None:
             names.append(element.name)
             zone_types.append(element.zone_type)
             max_drones.append(element.max_drones)
+            print(element.max_drones)
             positions.append((element.x_pos, element.y_pos))
             if element.is_start:
                 start: str = element.name
@@ -32,6 +33,8 @@ def main() -> None:
                 max_drones[-1] = data[0]
         if isinstance(element, Parse.Connection):
             connections.append((element.connection, element.max_link_capacity))
+
+    print(names, zone_types, max_drones, positions, connections, sep='\n')
 
     graph = Graph(names, zone_types, connections, start, goal, positions, max_drones)
 

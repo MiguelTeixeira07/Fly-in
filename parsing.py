@@ -107,9 +107,8 @@ class Parse:
                 line_nbr += 1
                 if line == '\n' or line[0] == '#':
                     continue
-                if line_nbr == 1:
-                    cls.parse_nb_drones(line)
-                    continue
+
+                print(line)
                 raw_line: str = line
                 line = line.strip().strip('\n')
                 split_line:str = line.split(' ')

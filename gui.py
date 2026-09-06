@@ -72,7 +72,7 @@ class Gui:
             for drone in sim_output:
                 if drone[turn] == node:
                     print(f'drone{sim_output.index(drone)} in node {node.name}')
-                    pygame.draw.circle(cls.screen, (30*sim_output.index(drone), 10*sim_output.index(drone), 10*sim_output.index(drone)), (x, y), 30)
+                    pygame.draw.circle(cls.screen, (10*sim_output.index(drone), 0*sim_output.index(drone), 0*sim_output.index(drone)), (x, y), 10)
 
         pygame.display.flip()
 
