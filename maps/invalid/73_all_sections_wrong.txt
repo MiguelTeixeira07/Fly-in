@@ -1,0 +1,5 @@
+nb_drones: potato
+start_hub: start x y [wat=wat]
+hub: middle
+end_hub:
+connection: a-b-c-d [max_link_capacity=nope]

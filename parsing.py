@@ -43,7 +43,7 @@ class Parse:
             connection: str,
             metadata: dict[str, str | int]
         ):
-            self.connection: str = connection
+            self.name: str = connection
             if 'max_link_capacity' in metadata.keys():
                 self.max_link_capacity: int = metadata['max_link_capacity']
             else:
@@ -64,33 +64,12 @@ class Parse:
         'priority',
     )
 
-    COLORS: tuple[str, str, str] = (
-        'red',
-        'green',
-        'blue',
-        'yellow',
-        'gray',
-        'orange',
-        'cyan',
-        'purple',
-        'brown',
-        'magenta',
-        'lime',
-        'gold',
-        'black',
-        'maroon',
-        'darkred',
-        'violet',
-        'crimson',
-        'rainbow'
-    )
-
     @classmethod
     def main_parser(
         cls,
         file_name: str
     ) -> list[int, 'Parse.Hub', 'Parse.Connection']:
-        FLAGS: dict[str, Callable[['Parse', str], str]] = {
+        TAGS: dict[str, Callable[['Parse', str], str]] = {
             'nb_drones': cls.parse_nb_drones,
             'start_hub': cls.general_parse,
             'end_hub': cls.general_parse,
@@ -108,20 +87,21 @@ class Parse:
                 if line == '\n' or line[0] == '#':
                     continue
 
-                print(line)
                 raw_line: str = line
                 line = line.strip().strip('\n')
                 split_line:str = line.split(' ')
                 split_line[0] = split_line[0].strip(':')
 
-                line_is_valid: bool = cls.validate_line(line_nbr, raw_line)[0]
-                err_msg: str = cls.validate_line(line_nbr, raw_line)[1]
+                line_is_valid, err_msg = cls.validate_line(raw_line)
 
                 if not line_is_valid:
                     raise ParsingError(f'Invalid syntax in line {line_nbr}: {err_msg}')
 
-                output.append(FLAGS[split_line[0]](line))
+                output.append(TAGS[split_line[0]](line))
                 i += 1
+
+        if not cls.check_output_validity(output):
+            raise ParsingError('Impossible simulation')
 
         return output
 
@@ -165,68 +145,218 @@ class Parse:
         split_line: list[str] = line.split(' ')
         metadata: dict[str, str | int] = {}
 
-        if len(split_line) > 3 or len(split_line) < 2:
-            raise ParsingError('1')
-        
-        names: str = split_line[1].split('-')
-        if len(names) > 2:
-            raise ParsingError('2')
-        
         if len(split_line) >= 3:
             metadata = cls.metadata_parse(' '.join(split_line[2:]))
-        
+
         return cls.Connection(split_line[1], metadata)
 
     @classmethod
     def metadata_parse(cls, raw_metadata: str) -> dict[str, str | int]:
+        valid: bool = False
+        for item in raw_metadata.split():
+            if any(char.isalnum() for char in item):
+                valid = True
+                break
+        if not valid:
+            raise ParsingError('Metadata is missing tokens')
+
         raw_metadata = raw_metadata.strip('[]')
         split_metadata: list[str] = raw_metadata.split(' ')
         metadata: dict[str, str | int] = {}
 
+        repeat: bool = False
         for data in split_metadata:
             tag, value = data.split('=')
 
             if tag not in cls.METADATA:
-                raise ParsingError('3')
+                raise ParsingError('Invalid tag in metadata')
+
+            if tag in metadata:
+                raise ParsingError('Duplicated tag in metadata')
 
             match tag:
                 case 'zone':
-                    #print(tag)
                     if value not in cls.ZONES:
-                        raise ParsingError('4')
-                    metadata[tag] = value
-                case 'color':
-                    if value not in cls.COLORS:
-                        print(value)
-                        raise ParsingError('5')
+                        raise ParsingError('Invalid zone')
                     metadata[tag] = value
                 case 'max_drones':
                     if not value.isdigit():
-                        raise ParsingError('6')
+                        raise ParsingError('Invalid ammount of drones')
                     metadata[tag] = int(value)
+                    if metadata[tag] <= 0:
+                        raise ParsingError('Invalid ammount of drones')
                 case 'max_link_capacity':
                     if not value.isdigit():
-                        raise ParsingError('7')
+                        raise ParsingError('Invalid ammount of drones')
                     metadata[tag] = int(value)
+                    if metadata[tag] <= 0:
+                        raise ParsingError('Invalid ammount of drones')
+                case 'color':
+                    if repeat:
+                        raise ParsingError('Duplicated tag in metadata')
+                    repeat = True
+                    if not value.isalpha():
+                        raise ParsingError('Invalid color')
 
         return metadata
 
-    @classmethod
-    def validate_line(cls, line_nbr: int, raw_line: str) -> tuple[bool, str]:
-        split_line: list[str] = raw_line.split(' ')
-        metadata_start: int = 0
-        count: int = 0
-        for thing in split_line:
-            if '[' in thing:
-                metadata_start = count
-                break
-            count += 1
+    @staticmethod
+    def validate_line(line: str) -> tuple[bool, str]:
+        VALID_TAGS: dict[str, Callable] = {
+            'nb_drones': Parse.validate_nb_drones,
+            'start_hub': lambda l: Parse.validate_hub(l, start_end=True),
+            'end_hub': lambda l: Parse.validate_hub(l, start_end=True),
+            'hub': Parse.validate_hub,
+            'connection': Parse.validate_connection
+        }
+        if not line[0].isalpha():
+            return (False, 'Invalid character in start of line')
+        allowed_chars: str = ' -:[]_=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n'
+        test_line: str = line
+        for char in allowed_chars:
+            test_line = test_line.replace(char, '')
+        if test_line != '':
+            return (False, 'Forbidden character')
 
-        metadata: str = raw_line.split(' ')[metadata_start]
-        for thing in split_line[metadata_start:]:
-            metadata += ' ' + thing
+        tag: str = line.split()[0]
 
-        if metadata_start != 0 and not (metadata[0] == '[' and metadata[-2] == ']'):
-            print(metadata, metadata[-2])
-            return (False, 'Metadata needs to be enclosed in brackets "[]"')
+        if ':' not in line:
+            return (False, 'Expected ":" after tag')
+
+        if line.count(':') > 1:
+            return (False, 'Invalid use of ":"')
+
+        if tag.strip(':') not in VALID_TAGS:
+            return (False, 'Invalid tag')
+
+        valid, msg = Parse.validate_metadata(line)
+        if not valid:
+            return (valid, msg)
+
+        valid, msg = VALID_TAGS[tag.strip(':')](line)
+
+        return (valid, msg)
+
+    @staticmethod
+    def validate_nb_drones(line: str) -> tuple[bool, str]:
+        if len(line.split()) != 2:
+            return (False, f'Expected 1 token, got {len(line.split()) - 1}')
+
+        if not line.split()[1].strip('-').isnumeric():
+            return (False, 'Invalid token')
+
+        if int(line.split()[1]) <= 0:
+            return (False, 'Number of drones has to be positive')
+
         return (True, '')
+
+    @staticmethod
+    def validate_hub(line: str, start_end=False) -> tuple[bool, str]:
+        if len(line.split()) < 4:
+            return (False, 'Hub requires at least 4 tokens')
+        if len(line.split()) > 4 and '[' not in line.split()[4]:
+            return (False, 'Too many tokens for Hub')
+
+        if '-' in line.split()[1]:
+            return (False, 'Hub name cannot contain "-"')
+
+        if not (line.split()[2].strip('-').isnumeric() and line.split()[3].strip('-').isnumeric()):
+            return (False, 'Invalid coordinates')
+
+        if start_end and 'max_drones' in line:
+            return (False, 'Start and end hubs must have unlimited drone capacity')
+
+        return(True, '')
+
+    @staticmethod
+    def validate_connection(line: str) -> tuple[bool, str]:
+        if len(line.split()) < 2:
+            return (False, 'Expected token after "Connection:"')
+
+        if len(line.split()) > 2 and '[' not in line.split()[2]:
+            return (False, 'Too many tokens for Connection')
+
+        names: str = line.split()[1].split('-')
+        if len(names) > 2 or len(names) < 2:
+            return (False, 'Invalid connection')
+
+        if names[0] == names[1]:
+            return (False, 'Invalid connection')
+
+        return(True, '')
+
+    @staticmethod
+    def validate_metadata(line: str) -> tuple[bool, str]:
+        index: int = 0
+        metadata_start: Opt[int] = None
+        for token in line.split():
+            if '[' in token:
+                metadata_start = index
+            index += 1
+
+        if not metadata_start:
+            if ']' in line.split()[-1]:
+                return (False, 'Unexpected "]"')
+            else:
+                return (True, '')
+
+        if metadata_start and ']' not in line.split()[-1]:
+            return (False, 'Expected "]" after "["')
+
+        for token in line.split()[metadata_start:]:
+            if token.count('=') != 1:
+                return (False, 'Invalid use of "=" in metadata')
+
+        return (True, '')
+
+
+    @staticmethod
+    def check_output_validity(
+        output: list[int, 'Parse.Hub', 'Parse.Connection']
+    ) -> bool:
+        if not (
+            any(type(item) is int for item in output)
+            and any(isinstance(item, Parse.Hub) for item in output)
+            and any(isinstance(item, Parse.Connection) for item in output)
+        ):
+            return False
+
+        if not isinstance(output[0], int):
+            return False
+
+        coords: list[tuple[int, int]] = []
+        hub_names: list[str] = []
+        con_names: list[str] = []
+        start_flag: bool = False
+        end_flag: bool = False
+
+        for item in output:
+            if isinstance(item, Parse.Hub):
+                if start_flag and item.is_start:
+                    return False
+                start_flag = item.is_start
+
+                if end_flag and item.is_goal:
+                    return False
+                end_flag = item.is_goal
+
+                if (item.x_pos, item.y_pos) in coords:
+                    return False
+                coords.append((item.x_pos, item.y_pos))
+
+                if item.name in hub_names:
+                    return False
+                hub_names.append(item.name)
+
+            if isinstance(item, Parse.Connection):
+                if item.name in con_names or '-'.join(item.name.split('-')[::-1]) in con_names:
+                    return False
+                con_names.append(item.name)
+
+                if (
+                    item.name.split('-')[0] not in hub_names or
+                    item.name.split('-')[1] not in hub_names
+                ):
+                    return False
+
+        return True

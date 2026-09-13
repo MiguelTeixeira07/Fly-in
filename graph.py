@@ -25,11 +25,32 @@ class Graph:
 
             self.pos: tuple[int, int] = pos
 
-            self.connections: list[tuple['Graph.Node', int]] = []
+            self.connections: list['Graph.Connection'] = []
 
             self.drones: list[Simulation.Drone] = []
 
             self.max_drones: int = max_drones
+
+
+    class Connection:
+        def __init__(
+            self,
+            name: str,
+            nodes: tuple['Graph.Node', 'Graph.Node'],
+            max_drones: int
+        ) -> None:
+            from simulation import Simulation
+
+            self.name: str = name
+            self.nodes: tuple['Graph.Node', 'Graph.Node'] = nodes
+            self.max_drones: int = max_drones
+            self.drones: list[Simulation.Drone] = []
+            self.drones_passed: int = 0
+            self.pos = ((self.nodes[0].pos[0] + self.nodes[1].pos[0]) / 2,
+                        (self.nodes[0].pos[1] + self.nodes[1].pos[1]) / 2)
+
+        def get_opposite_node(self, node: 'Graph.Node') -> 'Graph.Node':
+            return self.nodes[0 if self.nodes[0] != node else 1]
 
 
     def __init__(
@@ -43,27 +64,57 @@ class Graph:
             max_drones: list[int]
         ) -> None:
         self.nodes: list['Graph.Node'] = []
+        self.connections: list['Graph.Connection'] = []
 
         for name, zone_type, max_drones, pos in zip(names, zone_types, max_drones, positions):
             new_node = Graph.Node(name, zone_type, pos, max_drones)
             self.nodes.append(new_node)
 
         for connection in connections:
+            name = connection[0]
+            max_drones = connection[1]
             node1_name, node2_name = connection[0].split('-')
             node1 = self.get_node_by_name(node1_name)
             node2 = self.get_node_by_name(node2_name)
-            node1.connections.append((node2, connection[1]))
-            node2.connections.append((node1, connection[1]))
+            connection_object = Graph.Connection(name, (node1, node2), max_drones)
+            node1.connections.append(connection_object)
+            node2.connections.append(connection_object)
+            self.connections.append(connection_object)
 
         self.start: Graph.Node = self.get_node_by_name(start)
         self.goal: Graph.Node = self.get_node_by_name(goal)
 
     def get_node_by_name(self, name: str) -> 'Graph.Node':
-        index: Opt[int] = None
-
-        for i, node in enumerate(self.nodes):
+        for node in self.nodes:
             if node.name == name:
-                index = i
-                break
+                return node
 
-        return self.nodes[index]
+    def get_connection_by_nodes(self, node1: 'Graph.Node', node2: 'Graph.Node') -> 'Graph.Connection':
+        for connection in self.connections:
+            if node1.name in connection.name and node2.name in connection.name:
+                return connection
+
+    def clear_connections(self) -> None:
+        for connection in self.connections:
+            if len(connection.drones) > 0:
+                continue
+
+            connection.drones_passed = 0
+
+    @staticmethod
+    def graph_is_connected(graph: Graph) -> bool:
+        reached_nodes: list['Graph.Node'] = []
+        stack: list['Graph.Node'] = [graph.start]
+        visited: list['Graph.Node'] = []
+
+        while stack:
+            node = stack.pop()
+            reached_nodes.append(node)
+            visited.append(node)
+
+            for connection in node.connections:
+                candidate: 'Graph.Node' = connection.get_opposite_node(node)
+                if candidate not in visited:
+                    stack.append(candidate)
+
+        return len(reached_nodes) == len(graph.nodes)

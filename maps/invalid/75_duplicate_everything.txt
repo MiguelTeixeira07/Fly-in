@@ -1,0 +1,12 @@
+nb_drones: 5
+nb_drones: 10
+start_hub: start 0 0
+start_hub: other 1 1
+hub: middle 2 2
+hub: middle 3 3
+end_hub: goal 4 4
+end_hub: goal2 5 5
+connection: start-middle
+connection: start-middle
+connection: middle-goal
+connection: unknown-goal

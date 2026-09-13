@@ -6,17 +6,21 @@ from solution import Solution
 
 class Simulation:
     class Drone:
-        location: Graph.Node
+        location: Solution.Path.PathNode
 
         def __init__(self, number: int) -> None:
             self.visited: list[Graph.Node] = []
             self.number: int = number
 
-        def move(self, dest: Graph.Node):
+        def move(self, dest: Solution.Path.PathNode):
             self.visited.append(self.location)
-            self.location.drones.remove(self)
+            if isinstance(self.location.node, Graph.Node) and isinstance(dest.node, Graph.Node):
+                connection: Graph.Connection = Simulation.graph.get_connection_by_nodes(self.location.node, dest.node)
+                connection.drones_passed += 1
+
+            self.location.node.drones.remove(self)
             self.location = dest
-            self.location.drones.append(self)
+            self.location.node.drones.append(self)
 
     @classmethod
     def __init__(cls, graph: Graph, n_drones: int) -> None:
@@ -31,35 +35,27 @@ class Simulation:
             cls.graph.start.drones.append(new_drone)
 
     @classmethod
-    def start(cls) -> list[list[Graph.Node]]:
-        path: list[Graph.Node] = Solution.path(cls.graph)
+    def start(cls) -> list[list[Graph.Node | Graph.Connection]]:
+        path: Solution.Path = Solution.path(cls.graph)
         output: list[list[Graph.Node]] = [[] for _ in cls.drones]
 
         for drone in cls.drones:
-            drone.location = cls.graph.start
+            drone.location = path.root
 
         while len(cls.graph.goal.drones) < cls.n_drones:
-            print()
+            cls.graph.clear_connections()
             for drone in cls.drones:
-                print('\n')
-                if drone.location == Simulation.graph.goal:
-                    output[drone.number].append(drone.location)
-                    continue
-
-                for node in drone.location.connections:
-                    print(node[1])
-                    if node[0] not in path or len(node[0].drones) == node[0].max_drones:
+                for possibility in drone.location.possibilities:
+                    if len(possibility.node.drones) >= possibility.node.max_drones:
                         continue
+                    if isinstance(drone.location.node, Graph.Node) and isinstance(possibility.node, Graph.Node):
+                        connection: Graph.Connection = cls.graph.get_connection_by_nodes(drone.location.node, possibility.node)
+                        if connection.drones_passed >= connection.max_drones:
+                            continue
 
-                    if node[0] not in drone.visited:
-                        drone.move(node[0])
+                    drone.move(possibility)
+                    break
 
-                output[drone.number].append(drone.location)
-
-        for drone in output:
-            print(output.index(drone), end=': ')
-            for node in drone:
-                print(node.name, end=' ')
-            print()
+                output[drone.number].append(drone.location.node)
 
         return output
