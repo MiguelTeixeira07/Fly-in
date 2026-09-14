@@ -22,15 +22,13 @@ class Parse:
             self.x_pos, self.y_pos = coords
             self.is_start = False
             self.is_goal = False
+            self.zone_type: str = 'normal'
+            self.max_drones: int = 1
 
             if 'zone' in metadata.keys():
-                self.zone_type: str = metadata['zone']
-            else:
-                self.zone_type: str = 'normal'
+                self.zone_type = str(metadata['zone'])
             if 'max_drones' in metadata.keys():
-                self.max_drones: int = metadata['max_drones']
-            else:
-                self.max_drones: int = 1
+                self.max_drones = int(metadata['max_drones'])
 
             if is_start:
                 self.is_start = True
@@ -44,13 +42,12 @@ class Parse:
             metadata: dict[str, str | int]
         ):
             self.name: str = connection
+            self.max_link_capacity: int = 1
+
             if 'max_link_capacity' in metadata.keys():
-                self.max_link_capacity: int = metadata['max_link_capacity']
-            else:
-                self.max_link_capacity: int = 1
+                self.max_link_capacity = int(metadata['max_link_capacity'])
 
-
-    METADATA: tuple[str, str, str] = (
+    METADATA: tuple[str, str, str, str] = (
         'zone',
         'color',
         'max_link_capacity',
@@ -68,23 +65,29 @@ class Parse:
     def main_parser(
         cls,
         file_name: str
-    ) -> list[int, 'Parse.Hub', 'Parse.Connection']:
-
+    ) -> list[int | 'Parse.Hub' | 'Parse.Connection']:
         try:
             fd: TextIO = open(file_name, 'r')
         except PermissionError:
-            raise ParsingError('Parsing Error: Not enough permissions in map file')
+            raise ParsingError('Parsing Error: '
+                               'Not enough permissions in map file')
         else:
             fd.close()
 
-        TAGS: dict[str, Callable[['Parse', str], str]] = {
-            'nb_drones': lambda l, _: cls.parse_nb_drones(l),
+        TAGS: dict[
+            str,
+            Callable[
+                [str, int],
+                int | 'Parse.Hub' | 'Parse.Connection'
+            ]
+        ] = {
+            'nb_drones': lambda line, _: cls.parse_nb_drones(line),
             'start_hub': cls.general_parse,
             'end_hub': cls.general_parse,
             'hub': cls.general_parse,
             'connection': cls.connection_parse
         }
-        output: list[int, 'Parse.Hub', 'Parse.Connection'] = []
+        output: list[int | 'Parse.Hub' | 'Parse.Connection'] = []
 
         line_nbr: int = 0
         i: int = 0
@@ -96,13 +99,14 @@ class Parse:
 
                 raw_line: str = line
                 line = line.strip().strip('\n')
-                split_line:str = line.split(' ')
+                split_line: list[str] = line.split(' ')
                 split_line[0] = split_line[0].strip(':')
 
                 line_is_valid, err_msg = cls.validate_line(raw_line)
 
                 if not line_is_valid:
-                    raise ParsingError(f'Invalid syntax in line {line_nbr}: {err_msg}')
+                    raise ParsingError('Invalid syntax in line '
+                                       f'{line_nbr}: {err_msg}')
 
                 output.append(TAGS[split_line[0]](line, line_nbr))
                 i += 1
@@ -119,11 +123,8 @@ class Parse:
         line: str
     ) -> int:
         line = line.strip().strip('\n')
-        line = line.split(' ')
 
-        nbr_drones: int = int(line[1])
-
-        return nbr_drones
+        return int(line.split()[1])
 
     @classmethod
     def general_parse(
@@ -132,7 +133,7 @@ class Parse:
         line_nbr: int
     ) -> 'Parse.Hub':
         line = line.strip().strip('\n')
-        split_line: str = line.split(' ')
+        split_line: list[str] = line.split(' ')
         metadata: dict[str, str | int] = {}
         name: str = split_line[1]
         is_start: bool = 'start_hub' in split_line[0]
@@ -141,7 +142,10 @@ class Parse:
         x, y = (int(split_line[2]), int(split_line[3]))
 
         if len(split_line) >= 5:
-            metadata: dict[str, str | int] = cls.metadata_parse(' '.join(split_line[4:]), line_nbr)
+            metadata = cls.metadata_parse(
+                ' '.join(split_line[4:]),
+                line_nbr
+            )
 
         return cls.Hub(name, (x, y), metadata, is_start, is_goal)
 
@@ -161,7 +165,11 @@ class Parse:
         return cls.Connection(split_line[1], metadata)
 
     @classmethod
-    def metadata_parse(cls, raw_metadata: str, line_nbr: int) -> dict[str, str | int]:
+    def metadata_parse(
+        cls,
+        raw_metadata: str,
+        line_nbr: int
+    ) -> dict[str, str | int]:
         valid: bool = False
         for item in raw_metadata.split():
             if any(char.isalnum() for char in item):
@@ -195,7 +203,7 @@ class Parse:
                         print(f'Invalid syntax in line {line_nbr}:', end=' ')
                         raise ParsingError('Invalid ammount of drones')
                     metadata[tag] = int(value)
-                    if metadata[tag] <= 0:
+                    if int(metadata[tag]) <= 0:
                         print(f'Invalid syntax in line {line_nbr}:', end=' ')
                         raise ParsingError('Invalid ammount of drones')
                 case 'max_link_capacity':
@@ -203,7 +211,7 @@ class Parse:
                         print(f'Invalid syntax in line {line_nbr}:', end=' ')
                         raise ParsingError('Invalid ammount of drones')
                     metadata[tag] = int(value)
-                    if metadata[tag] <= 0:
+                    if int(metadata[tag]) <= 0:
                         print(f'Invalid syntax in line {line_nbr}:', end=' ')
                         raise ParsingError('Invalid ammount of drones')
                 case 'color':
@@ -221,14 +229,18 @@ class Parse:
     def validate_line(line: str) -> tuple[bool, str]:
         VALID_TAGS: dict[str, Callable] = {
             'nb_drones': Parse.validate_nb_drones,
-            'start_hub': lambda l: Parse.validate_hub(l, start_end=True),
-            'end_hub': lambda l: Parse.validate_hub(l, start_end=True),
+            'start_hub': lambda line: Parse.validate_hub(
+                line,
+                start_end=True
+            ),
+            'end_hub': lambda line: Parse.validate_hub(line, start_end=True),
             'hub': Parse.validate_hub,
             'connection': Parse.validate_connection
         }
         if not line[0].isalpha():
             return (False, 'Invalid character in start of line')
-        allowed_chars: str = ' -:[]_=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n'
+        allowed_chars: str = ' -:[]_=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN'
+        allowed_chars += 'OPQRSTUVWXYZ0123456789\n'
         test_line: str = line
         for char in allowed_chars:
             test_line = test_line.replace(char, '')
@@ -277,13 +289,19 @@ class Parse:
         if '-' in line.split()[1]:
             return (False, 'Hub name cannot contain "-"')
 
-        if not (line.split()[2].strip('-').isnumeric() and line.split()[3].strip('-').isnumeric()):
+        if not (
+            line.split()[2].strip('-').isnumeric() and
+            line.split()[3].strip('-').isnumeric()
+        ):
             return (False, 'Invalid coordinates')
 
         if start_end and 'max_drones' in line:
-            return (False, 'Start and end hubs must have unlimited drone capacity')
+            return (
+                False,
+                'Start and end hubs must have unlimited drone capacity'
+            )
 
-        return(True, '')
+        return (True, '')
 
     @staticmethod
     def validate_connection(line: str) -> tuple[bool, str]:
@@ -293,14 +311,14 @@ class Parse:
         if len(line.split()) > 2 and '[' not in line.split()[2]:
             return (False, 'Too many tokens for Connection')
 
-        names: str = line.split()[1].split('-')
+        names: list[str] = line.split()[1].split('-')
         if len(names) > 2 or len(names) < 2:
             return (False, 'Invalid connection')
 
         if names[0] == names[1]:
             return (False, 'Invalid connection')
 
-        return(True, '')
+        return (True, '')
 
     @staticmethod
     def validate_metadata(line: str) -> tuple[bool, str]:
@@ -326,10 +344,9 @@ class Parse:
 
         return (True, '')
 
-
     @staticmethod
     def check_output_validity(
-        output: list[int, 'Parse.Hub', 'Parse.Connection']
+        output: list[int | 'Parse.Hub' | 'Parse.Connection']
     ) -> tuple[bool, str]:
         if not (
             any(type(item) is int for item in output)
@@ -366,7 +383,10 @@ class Parse:
                 hub_names.append(item.name)
 
             if isinstance(item, Parse.Connection):
-                if item.name in con_names or '-'.join(item.name.split('-')[::-1]) in con_names:
+                if (
+                    item.name in con_names or
+                    '-'.join(item.name.split('-')[::-1]) in con_names
+                ):
                     return (False, 'Connections must not be repeated')
                 con_names.append(item.name)
 
@@ -374,6 +394,9 @@ class Parse:
                     item.name.split('-')[0] not in hub_names or
                     item.name.split('-')[1] not in hub_names
                 ):
-                    return (False, 'Connections must be between existing hubs')
+                    return (
+                        False,
+                        'Connections must be between existing hubs'
+                    )
 
         return (True, '')

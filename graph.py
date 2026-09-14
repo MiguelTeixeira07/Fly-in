@@ -1,6 +1,3 @@
-from typing import Optional as Opt
-
-
 class Graph:
     class Node:
         def __init__(
@@ -13,15 +10,16 @@ class Graph:
             from simulation import Simulation
 
             self.name: str = name
+            self.weight: int = 1
             match zone_type:
                 case 'priority':
-                    self.weight: int = 0
+                    self.weight = 0
                 case 'normal':
-                    self.weight: int = 1
+                    self.weight = 1
                 case 'restricted':
-                    self.weight: int = 2
+                    self.weight = 2
                 case 'blocked':
-                    self.weight: int = 3
+                    self.weight = 3
 
             self.pos: list[int] = list(pos)
 
@@ -30,7 +28,6 @@ class Graph:
             self.drones: list[Simulation.Drone] = []
 
             self.max_drones: int = max_drones
-
 
     class Connection:
         def __init__(
@@ -52,21 +49,25 @@ class Graph:
         def get_opposite_node(self, node: 'Graph.Node') -> 'Graph.Node':
             return self.nodes[0 if self.nodes[0] != node else 1]
 
-
     def __init__(
-            self,
-            names: list[str],
-            zone_types: list[str],
-            connections: list[tuple[str, int]],
-            start: str,
-            goal: str,
-            positions: list[tuple[int, int]],
-            max_drones: list[int]
-        ) -> None:
+        self,
+        names: list[str],
+        zone_types: list[str],
+        connections: list[tuple[str, int]],
+        start: str,
+        goal: str,
+        positions: list[tuple[int, int]],
+        max_drones_l: list[int]
+    ) -> None:
         self.nodes: list['Graph.Node'] = []
         self.connections: list['Graph.Connection'] = []
 
-        for name, zone_type, max_drones, pos in zip(names, zone_types, max_drones, positions):
+        for name, zone_type, max_drones, pos in zip(
+            names,
+            zone_types,
+            max_drones_l,
+            positions
+        ):
             new_node = Graph.Node(name, zone_type, pos, max_drones)
             self.nodes.append(new_node)
 
@@ -78,24 +79,36 @@ class Graph:
             node1_name, node2_name = connection[0].split('-')
             node1 = self.get_node_by_name(node1_name)
             node2 = self.get_node_by_name(node2_name)
-            connection_object = Graph.Connection(name, (node1, node2), max_drones)
+            connection_object = Graph.Connection(
+                name,
+                (node1, node2),
+                max_drones
+            )
             node1.connections.append(connection_object)
             node2.connections.append(connection_object)
             self.connections.append(connection_object)
 
-        self.start: Graph.Node = self.get_node_by_name(start)
-        self.goal: Graph.Node = self.get_node_by_name(goal)
-
+        self.start: 'Graph.Node' = self.get_node_by_name(start)
+        self.goal: 'Graph.Node' = self.get_node_by_name(goal)
 
     def get_node_by_name(self, name: str) -> 'Graph.Node':
         for node in self.nodes:
             if node.name == name:
                 return node
+        return self.nodes[0]
 
-    def get_connection_by_nodes(self, node1: 'Graph.Node', node2: 'Graph.Node') -> 'Graph.Connection':
+    def get_connection_by_nodes(
+        self,
+        node1: 'Graph.Node',
+        node2: 'Graph.Node'
+    ) -> 'Graph.Connection':
         for connection in self.connections:
-            if node1.name in connection.name and node2.name in connection.name:
+            if (
+                node1.name in connection.name and
+                node2.name in connection.name
+            ):
                 return connection
+        return self.connections[0]
 
     def clear_connections(self) -> None:
         for connection in self.connections:
@@ -146,6 +159,8 @@ class Graph:
                 node.pos[1] -= min_y
 
         for node in self.nodes:
-            node.pos[1] = abs(max(node.pos[1] for node in self.nodes) - node.pos[1])
+            node.pos[1] = abs(
+                max(node.pos[1] for node in self.nodes) - node.pos[1]
+            )
 
         return self

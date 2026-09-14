@@ -10,7 +10,7 @@ class Solution:
                 self.node: Graph.Node | Graph.Connection = data
                 self.possibilities: list[Solution.Path.PathNode] = []
 
-        def __init__(self, paths: list[list[Graph.Node, Graph.Connection]]):
+        def __init__(self, paths: list[list[Graph.Node | Graph.Connection]]):
             self.root: Solution.Path.PathNode = self.PathNode(paths[0][0])
 
             for path in paths:
@@ -44,12 +44,18 @@ class Solution:
 
             print_node(self.root)
 
-
     @staticmethod
-    def breadth_first_search(graph: Graph) -> list[Graph.Node]:
+    def breadth_first_search(
+        graph: Graph
+    ) -> list[Graph.Node | Graph.Connection]:
         start: Graph.Node = graph.start
 
-        queue: deque[tuple[Graph.Node, list[Graph.Node]]] = deque()
+        queue: deque[
+            tuple[
+                Graph.Node,
+                list[Graph.Node | Graph.Connection]
+            ]
+        ] = deque()
         visited: set[Graph.Node] = set()
 
         queue.append((start, [start]))
@@ -61,7 +67,10 @@ class Solution:
                 return path
 
             for candidate in node.connections:
-                if candidate.get_opposite_node(node) not in visited and candidate.get_opposite_node(node).weight < 3:
+                if (
+                    candidate.get_opposite_node(node) not in visited and
+                    candidate.get_opposite_node(node).weight < 3
+                ):
                     visited.add(candidate.get_opposite_node(node))
 
                     queue.append((
@@ -83,14 +92,21 @@ class Solution:
 
     @staticmethod
     def path(graph: Graph) -> Solution.Path:
-        shortest_length = Solution.get_weight_sum(
+        shortest_length: int = Solution.get_weight_sum(
             Solution.breadth_first_search(graph)
         )
 
-        start = graph.start
+        start: Graph.Node = graph.start
 
-        queue = [(start, [start])]
-        paths: list[list[Graph.Node]] = []
+        queue: list[
+            tuple[
+                Graph.Node | Graph.Connection,
+                list[
+                    Graph.Node | Graph.Connection
+                ]
+            ]
+        ] = [(start, [start])]
+        paths: list[list[Graph.Node | Graph.Connection]] = []
 
         while queue:
             node, current_path = queue.pop()
@@ -114,10 +130,12 @@ class Solution:
                 if candidate in current_path or candidate.weight == 3:
                     continue
 
-
                 if Solution.get_weight_sum(current_path) <= shortest_length:
                     if candidate.weight == 2:
-                        queue.append((candidate, current_path + [connection, candidate]))
+                        queue.append((
+                            candidate,
+                            current_path + [connection, candidate]
+                        ))
                         continue
                     queue.append((candidate, current_path + [candidate]))
 
