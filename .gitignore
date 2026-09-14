@@ -1,2 +1,4 @@
 __pycache__/
 venv/
+maps/invalid/
+gui_test.py

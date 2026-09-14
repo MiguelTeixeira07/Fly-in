@@ -5,16 +5,17 @@ from graph import Graph
 
 
 class Gui:
-    width: int = 900
-    height: int = 600
+    width: int = 1200
+    height: int = 800
 
     @classmethod
     def __init__(cls, graph) -> None:
         cls.running: bool = True
         cls.scale: list[int, int] = Gui.get_scale(graph)
-        if cls.scale[0] == 0:
+
+        if cls.scale[0] <= 0:
             cls.scale[0] = 1
-        if cls.scale[1] == 0:
+        if cls.scale[1] <= 0:
             cls.scale[1] = 1
 
     @classmethod
@@ -56,23 +57,23 @@ class Gui:
             return
 
         for object in graph.nodes + graph.connections:
-            x1, y1 = object.pos
-            x1 = (cls.width / cls.scale[0]) * x1 / 2 + 25
-            y1 = (cls.height / cls.scale[1]) * y1 / 2 + 500
+            x_pos, y_pos = object.pos
+            x1 = (1200 / cls.scale[0]) * x_pos + 1200 / (cls.scale[0] * 2)
+            y1 = (800 / cls.scale[1]) * y_pos + 800 / (cls.scale[1] * 2)
 
             if isinstance(object, Graph.Connection):
                 continue
 
             for con in object.connections:
-                x2, y2 = con.get_opposite_node(object).pos
-                x2 = (cls.width / cls.scale[0]) * x2 / 2 + 25
-                y2 = (cls.height / cls.scale[1]) * y2 / 2 + 500
+                x_pos, y_pos = con.get_opposite_node(object).pos
+                x2 = (1200 / cls.scale[0]) * x_pos + 1200 / (cls.scale[0] * 2)
+                y2 = (800 / cls.scale[1]) * y_pos + 800 / (cls.scale[1] * 2)
                 pygame.draw.line(cls.screen, (200, 200, 200), (x1, y1), (x2, y2), 3)
 
         for object in graph.nodes + graph.connections:
-            x, y = object.pos
-            x = (cls.width / cls.scale[0]) * x / 2 + 25
-            y = (cls.height / cls.scale[1]) * y / 2 + 500
+            x_pos, y_pos = object.pos
+            x = (1200 / cls.scale[0]) * x_pos + 1200 / (cls.scale[0] * 2)
+            y = (800 / cls.scale[1]) * y_pos + 800 / (cls.scale[1] * 2)
             if isinstance(object, Graph.Node):
                 pygame.draw.circle(cls.screen, (255, 125, 0), (x, y), 15)
 
@@ -91,25 +92,12 @@ class Gui:
         cls.running = False
 
     def get_scale(graph: Graph) -> list[int, int]:
-        delta_x: int = 0
-        delta_y: int = 0
-        max_x: int = 0
-        max_y: int = 0
-        min_x: int = graph.nodes[0].pos[0]
-        min_y: int = graph.nodes[0].pos[1]
+        max_x, max_y = graph.nodes[0].pos
 
         for node in graph.nodes:
             if node.pos[0] > max_x:
                 max_x = node.pos[0]
-            if node.pos[1] > max_x:
-                max_y = node.pos[0]
+            if node.pos[1] > max_y:
+                max_y = node.pos[1]
 
-            if node.pos[0] < max_x:
-                min_x = node.pos[0]
-            if node.pos[1] < max_y:
-                min_y = node.pos[0]
-
-        delta_x = max_x - min_x
-        delta_y = max_y - min_y
-
-        return [delta_x, delta_y]
+        return [max_x + 1, max_y + 1]

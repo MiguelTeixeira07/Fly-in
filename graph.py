@@ -23,7 +23,7 @@ class Graph:
                 case 'blocked':
                     self.weight: int = 3
 
-            self.pos: tuple[int, int] = pos
+            self.pos: list[int] = list(pos)
 
             self.connections: list['Graph.Connection'] = []
 
@@ -70,6 +70,8 @@ class Graph:
             new_node = Graph.Node(name, zone_type, pos, max_drones)
             self.nodes.append(new_node)
 
+        self.normalize_coords()
+
         for connection in connections:
             name = connection[0]
             max_drones = connection[1]
@@ -83,6 +85,7 @@ class Graph:
 
         self.start: Graph.Node = self.get_node_by_name(start)
         self.goal: Graph.Node = self.get_node_by_name(goal)
+
 
     def get_node_by_name(self, name: str) -> 'Graph.Node':
         for node in self.nodes:
@@ -117,4 +120,32 @@ class Graph:
                 if candidate not in visited:
                     stack.append(candidate)
 
-        return len(reached_nodes) == len(graph.nodes)
+        return len(set(reached_nodes)) == len(graph.nodes)
+
+    def normalize_coords(self) -> 'Graph':
+        min_x, min_y = self.nodes[0].pos
+
+        for node in self.nodes:
+            if node.pos[0] < min_x:
+                min_x = node.pos[0]
+            if node.pos[1] < min_y:
+                min_y = node.pos[1]
+
+        if min_x < 0:
+            for node in self.nodes:
+                node.pos[0] += abs(min_x)
+        if min_x > 0:
+            for node in self.nodes:
+                node.pos[0] -= min_x
+
+        if min_y < 0:
+            for node in self.nodes:
+                node.pos[1] += abs(min_y)
+        if min_y > 0:
+            for node in self.nodes:
+                node.pos[1] -= min_y
+
+        for node in self.nodes:
+            node.pos[1] = abs(max(node.pos[1] for node in self.nodes) - node.pos[1])
+
+        return self
