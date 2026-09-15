@@ -10,7 +10,7 @@ class Simulation:
             self.visited: list[Solution.Path.PathNode] = []
             self.number: int = number
 
-        def move(self, dest: Solution.Path.PathNode):
+        def move(self, dest: Solution.Path.PathNode) -> None:
             self.visited.append(self.location)
             if (
                 isinstance(self.location.node, Graph.Node) and

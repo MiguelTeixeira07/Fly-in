@@ -3,8 +3,8 @@ from typing import Optional as Opt, TextIO
 
 
 class ParsingError(Exception):
-    def __init__(self, message):
-        self.message = message
+    def __init__(self, message: str) -> None:
+        self.message: str = message
         super().__init__(self.message)
 
 
@@ -71,6 +71,9 @@ class Parse:
         except PermissionError:
             raise ParsingError('Parsing Error: '
                                'Not enough permissions in map file')
+        except FileNotFoundError:
+            raise ParsingError('Parsing Error: '
+                               f'File "{file_name}" was not found')
         else:
             fd.close()
 
@@ -227,7 +230,7 @@ class Parse:
 
     @staticmethod
     def validate_line(line: str) -> tuple[bool, str]:
-        VALID_TAGS: dict[str, Callable] = {
+        VALID_TAGS: dict[str, Callable[[str], tuple[bool, str]]] = {
             'nb_drones': Parse.validate_nb_drones,
             'start_hub': lambda line: Parse.validate_hub(
                 line,
@@ -280,7 +283,7 @@ class Parse:
         return (True, '')
 
     @staticmethod
-    def validate_hub(line: str, start_end=False) -> tuple[bool, str]:
+    def validate_hub(line: str, start_end: bool = False) -> tuple[bool, str]:
         if len(line.split()) < 4:
             return (False, 'Hub requires at least 4 tokens')
         if len(line.split()) > 4 and '[' not in line.split()[4]:
