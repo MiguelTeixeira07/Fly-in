@@ -2,8 +2,34 @@ import sys
 
 
 class Fly_In:
+    """Application launcher for the Fly-In drone routing program.
+
+    Groups the command-line entry point as a static method so the module
+    can be imported elsewhere without triggering execution.
+    """
+
     @staticmethod
     def main() -> None:
+        """Runs the Fly-In application.
+
+        Reads the map file path from the command line, parses it into
+        hubs and connections, builds a graph from the parsed data,
+        checks that the graph is fully connected, and starts the GUI.
+
+        Expected usage:
+            python3 fly_in.py <path/to/map>
+
+        Args:
+            None: Arguments are read directly from sys.argv.
+
+        Returns:
+            None
+
+        Raises:
+            None: Invalid arguments, parsing errors, and disconnected
+                graphs are handled internally and reported by printing
+                a message instead of raising an exception.
+        """
         if len(sys.argv) != 2:
             print('Invalid arguments')
             print('Expected usage: python3 fly_in.py <path/to/map>')

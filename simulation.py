@@ -3,14 +3,53 @@ from solution import Solution
 
 
 class Simulation:
+    """Drives drones through the graph along the precomputed path tree.
+
+    Simulates `n_drones` moving step by step from the graph's start
+    node to its goal node, respecting node and connection capacity
+    limits, following the routes described by a Solution.Path tree.
+
+    Attributes:
+        drones (list[Simulation.Drone]): All drones in the simulation.
+        n_drones (int): Total number of drones being simulated.
+        graph (Graph): Graph the simulation runs on.
+    """
+
     class Drone:
+        """A single drone moving through the graph.
+
+        Attributes:
+            location (Solution.Path.PathNode): Drone's current position
+                in the path tree.
+            visited (list[Solution.Path.PathNode]): History of path
+                tree nodes this drone has occupied.
+            number (int): Identifier of this drone.
+        """
+
         location: Solution.Path.PathNode
 
         def __init__(self, number: int) -> None:
+            """Initializes a drone.
+
+            Args:
+                number (int): Identifier of this drone.
+            """
             self.visited: list[Solution.Path.PathNode] = []
             self.number: int = number
 
         def move(self, dest: Solution.Path.PathNode) -> None:
+            """Moves the drone to a new path tree node.
+
+            Records the current location in the visit history,
+            increments the traversed connection's pass-through counter
+            when moving between two graph nodes, and updates the
+            drone's presence in the graph's node/connection drone
+            lists.
+
+            Args:
+                dest (Solution.Path.PathNode): Path tree node to move
+                    the drone to.
+            """
             self.visited.append(self.location)
             if (
                 isinstance(self.location.node, Graph.Node) and
@@ -36,6 +75,23 @@ class Simulation:
         graph: Graph,
         n_drones: int
     ) -> list[list[Graph.Node | Graph.Connection]]:
+        """Runs the full simulation from start to finish.
+
+        Computes the minimum-weight path tree for the graph, creates
+        `n_drones` drones at the start node, then repeatedly advances
+        each drone one step along an available branch of the path tree
+        (respecting node and connection capacity limits) until every
+        drone has reached the goal node.
+
+        Args:
+            graph (Graph): Graph to simulate drone movement on.
+            n_drones (int): Number of drones to simulate.
+
+        Returns:
+            list[list[Graph.Node | Graph.Connection]]: Per-drone
+                sequence of nodes occupied at each simulation step,
+                indexed by drone number.
+        """
         cls.graph = graph
         cls.n_drones = n_drones
         cls.drones = []

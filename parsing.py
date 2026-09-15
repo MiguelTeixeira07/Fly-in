@@ -3,13 +3,52 @@ from typing import Optional as Opt, TextIO
 
 
 class ParsingError(Exception):
+    """Exception raised for errors encountered while parsing a map file.
+
+    Attributes:
+        message (str): Explanation of the parsing error.
+    """
+
     def __init__(self, message: str) -> None:
+        """Initializes the exception with an explanatory message.
+
+        Args:
+            message (str): Explanation of the parsing error.
+        """
         self.message: str = message
         super().__init__(self.message)
 
 
 class Parse:
+    """Namespace for parsing a Fly-In map file into hubs and connections.
+
+    Provides nested data classes for hubs and connections, static/class
+    methods for tokenizing and validating each line of a map file, and
+    the main entry point that turns a map file into a list of parsed
+    elements.
+
+    Attributes:
+        METADATA (tuple[str, str, str, str]): Recognized metadata tags
+            that can appear inside square brackets on a hub or
+            connection line.
+        ZONES (tuple[str, str, str, str]): Valid values for the "zone"
+            metadata tag.
+    """
+
     class Hub:
+        """A single hub (node) parsed from the map file.
+
+        Attributes:
+            name (str): Name of the hub.
+            x_pos (int): X coordinate of the hub.
+            y_pos (int): Y coordinate of the hub.
+            is_start (bool): Whether this hub is the start of the map.
+            is_goal (bool): Whether this hub is the goal of the map.
+            zone_type (str): Zone type of the hub. Defaults to 'normal'.
+            max_drones (int): Maximum number of drones the hub can hold
+                at once. Defaults to 1.
+        """
+
         def __init__(
             self,
             name: str,
@@ -18,6 +57,20 @@ class Parse:
             is_start: bool,
             is_goal: bool
         ) -> None:
+            """Initializes a hub from parsed line data.
+
+            Reads optional 'zone' and 'max_drones' metadata entries,
+            falling back to defaults when not present, and flags the
+            hub as start and/or goal accordingly.
+
+            Args:
+                name (str): Name of the hub.
+                coords (tuple[int, int]): (x, y) position of the hub.
+                metadata (dict[str, str | int]): Optional metadata
+                    parsed from the line, e.g. zone and max_drones.
+                is_start (bool): Whether this hub is the map's start.
+                is_goal (bool): Whether this hub is the map's goal.
+            """
             self.name: str = name
             self.x_pos, self.y_pos = coords
             self.is_start = False
@@ -36,11 +89,31 @@ class Parse:
                 self.is_goal = True
 
     class Connection:
+        """A single connection (edge) parsed from the map file.
+
+        Attributes:
+            name (str): Name of the connection, formatted as
+                '<hub1>-<hub2>'.
+            max_link_capacity (int): Maximum number of drones that can
+                travel through this connection at once. Defaults to 1.
+        """
+
         def __init__(
             self,
             connection: str,
             metadata: dict[str, str | int]
         ):
+            """Initializes a connection from parsed line data.
+
+            Reads an optional 'max_link_capacity' metadata entry,
+            falling back to the default when not present.
+
+            Args:
+                connection (str): Name of the connection, formatted as
+                    '<hub1>-<hub2>'.
+                metadata (dict[str, str | int]): Optional metadata
+                    parsed from the line, e.g. max_link_capacity.
+            """
             self.name: str = connection
             self.max_link_capacity: int = 1
 
@@ -66,6 +139,27 @@ class Parse:
         cls,
         file_name: str
     ) -> list[int | 'Parse.Hub' | 'Parse.Connection']:
+        """Parses a map file into a list of drone count, hubs, and connections.
+
+        Opens the file to check it exists and is readable, then reads it
+        line by line, skipping blank lines and comments. Each remaining
+        line is validated and dispatched to the appropriate parsing
+        function based on its leading tag. The resulting list of parsed
+        elements is validated as a whole before being returned.
+
+        Args:
+            file_name (str): Path of the map file to parse.
+
+        Returns:
+            list[int | Parse.Hub | Parse.Connection]: Parsed elements in
+                file order: the number of drones (int), hubs, and
+                connections.
+
+        Raises:
+            ParsingError: If the file cannot be opened (missing or no
+                permission), if a line has invalid syntax, or if the
+                overall parsed output fails validation.
+        """
         try:
             fd: TextIO = open(file_name, 'r')
         except PermissionError:
@@ -125,6 +219,15 @@ class Parse:
         cls,
         line: str
     ) -> int:
+        """Parses the number of drones from a 'nb_drones' line.
+
+        Args:
+            line (str): Raw line containing the drone count, e.g.
+                'nb_drones: 5'.
+
+        Returns:
+            int: Number of drones declared on the line.
+        """
         line = line.strip().strip('\n')
 
         return int(line.split()[1])
@@ -135,6 +238,19 @@ class Parse:
         line: str,
         line_nbr: int
     ) -> 'Parse.Hub':
+        """Parses a hub definition line into a Hub instance.
+
+        Handles 'hub', 'start_hub', and 'end_hub' lines, extracting the
+        hub's name, coordinates, and any optional metadata.
+
+        Args:
+            line (str): Raw line describing the hub.
+            line_nbr (int): Line number in the file, used for error
+                reporting when parsing metadata.
+
+        Returns:
+            Parse.Hub: The parsed hub.
+        """
         line = line.strip().strip('\n')
         split_line: list[str] = line.split(' ')
         metadata: dict[str, str | int] = {}
@@ -158,6 +274,17 @@ class Parse:
         line: str,
         line_nbr: int
     ) -> 'Parse.Connection':
+        """Parses a connection definition line into a Connection instance.
+
+        Args:
+            line (str): Raw line describing the connection, e.g.
+                'connection: A-B [max_link_capacity=2]'.
+            line_nbr (int): Line number in the file, used for error
+                reporting when parsing metadata.
+
+        Returns:
+            Parse.Connection: The parsed connection.
+        """
         line = line.strip().strip('\n')
         split_line: list[str] = line.split(' ')
         metadata: dict[str, str | int] = {}
@@ -173,6 +300,27 @@ class Parse:
         raw_metadata: str,
         line_nbr: int
     ) -> dict[str, str | int]:
+        """Parses the bracketed metadata portion of a hub or connection line.
+
+        Splits the metadata string into 'tag=value' tokens and validates
+        each tag and value according to the rules for that tag (zone,
+        max_drones, max_link_capacity, color).
+
+        Args:
+            raw_metadata (str): Raw metadata string, e.g.
+                '[zone=priority max_drones=3]'.
+            line_nbr (int): Line number in the file, used for error
+                reporting.
+
+        Returns:
+            dict[str, str | int]: Mapping of metadata tag to its parsed
+                value.
+
+        Raises:
+            ParsingError: If the metadata is empty, contains an unknown
+                or duplicated tag, or contains an invalid value for a
+                known tag.
+        """
         valid: bool = False
         for item in raw_metadata.split():
             if any(char.isalnum() for char in item):
@@ -230,6 +378,22 @@ class Parse:
 
     @staticmethod
     def validate_line(line: str) -> tuple[bool, str]:
+        """Validates the overall syntax of a single map file line.
+
+        Checks that the line starts with a letter, contains only
+        allowed characters, has exactly one ':' following a recognized
+        tag, and that its metadata section (if any) is well-formed.
+        Delegates further, tag-specific validation to the matching
+        validate_* function.
+
+        Args:
+            line (str): Raw line from the map file.
+
+        Returns:
+            tuple[bool, str]: A pair where the first element indicates
+                whether the line is valid, and the second is an error
+                message (empty string if valid).
+        """
         VALID_TAGS: dict[str, Callable[[str], tuple[bool, str]]] = {
             'nb_drones': Parse.validate_nb_drones,
             'start_hub': lambda line: Parse.validate_hub(
@@ -271,6 +435,20 @@ class Parse:
 
     @staticmethod
     def validate_nb_drones(line: str) -> tuple[bool, str]:
+        """Validates a 'nb_drones' line.
+
+        Checks that the line has exactly one token after the tag, that
+        the token is numeric, and that the resulting drone count is
+        positive.
+
+        Args:
+            line (str): Raw 'nb_drones' line to validate.
+
+        Returns:
+            tuple[bool, str]: A pair where the first element indicates
+                whether the line is valid, and the second is an error
+                message (empty string if valid).
+        """
         if len(line.split()) != 2:
             return (False, f'Expected 1 token, got {len(line.split()) - 1}')
 
@@ -284,6 +462,23 @@ class Parse:
 
     @staticmethod
     def validate_hub(line: str, start_end: bool = False) -> tuple[bool, str]:
+        """Validates a 'hub', 'start_hub', or 'end_hub' line.
+
+        Checks the token count, that the hub name does not contain '-',
+        that the coordinates are numeric, and, for start/end hubs, that
+        no 'max_drones' capacity restriction is present.
+
+        Args:
+            line (str): Raw hub line to validate.
+            start_end (bool): Whether this line declares a start or end
+                hub, which must not restrict drone capacity. Defaults
+                to False.
+
+        Returns:
+            tuple[bool, str]: A pair where the first element indicates
+                whether the line is valid, and the second is an error
+                message (empty string if valid).
+        """
         if len(line.split()) < 4:
             return (False, 'Hub requires at least 4 tokens')
         if len(line.split()) > 4 and '[' not in line.split()[4]:
@@ -308,6 +503,19 @@ class Parse:
 
     @staticmethod
     def validate_connection(line: str) -> tuple[bool, str]:
+        """Validates a 'connection' line.
+
+        Checks the token count and that the connection references
+        exactly two distinct hub names separated by '-'.
+
+        Args:
+            line (str): Raw connection line to validate.
+
+        Returns:
+            tuple[bool, str]: A pair where the first element indicates
+                whether the line is valid, and the second is an error
+                message (empty string if valid).
+        """
         if len(line.split()) < 2:
             return (False, 'Expected token after "Connection:"')
 
@@ -325,6 +533,20 @@ class Parse:
 
     @staticmethod
     def validate_metadata(line: str) -> tuple[bool, str]:
+        """Validates the metadata section of a line, if present.
+
+        Locates the token containing '[' (if any) and ensures the last
+        token closes with ']', and that every metadata token contains
+        exactly one '=' sign.
+
+        Args:
+            line (str): Raw line to validate.
+
+        Returns:
+            tuple[bool, str]: A pair where the first element indicates
+                whether the metadata is valid, and the second is an
+                error message (empty string if valid).
+        """
         index: int = 0
         metadata_start: Opt[int] = None
         for token in line.split():
@@ -351,6 +573,22 @@ class Parse:
     def check_output_validity(
         output: list[int | 'Parse.Hub' | 'Parse.Connection']
     ) -> tuple[bool, str]:
+        """Validates the fully parsed contents of a map file.
+
+        Ensures the output contains a drone count, at least one hub,
+        and at least one connection, that exactly one start hub and one
+        end hub exist, that hub coordinates and names are unique, and
+        that connections are unique and reference existing hubs.
+
+        Args:
+            output (list[int | Parse.Hub | Parse.Connection]): Parsed
+                elements produced by main_parser.
+
+        Returns:
+            tuple[bool, str]: A pair where the first element indicates
+                whether the parsed output is valid, and the second is
+                an error message (empty string if valid).
+        """
         if not (
             any(type(item) is int for item in output)
             and any(isinstance(item, Parse.Hub) for item in output)
