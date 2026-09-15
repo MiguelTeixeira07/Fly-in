@@ -1,6 +1,6 @@
 import pygame
+import time
 from typing import Any
-from time import sleep
 from graph import Graph
 
 
@@ -30,17 +30,18 @@ class Gui:
         index = 0
 
         running: bool = True
+        current_time: int = 0
         while running:
             cls.screen.fill((50, 50, 50))
-            if index < len(sim_output[0]):
+            if index < len(sim_output[0]) and int(time.time()) != current_time:
                 Gui.draw_graph(graph, sim_output, index)
                 print()
-            index += 1
+                current_time = int(time.time())
+                index += 1
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                     break
-            sleep(1)
 
         pygame.quit()
         exit(0)
@@ -101,6 +102,7 @@ class Gui:
                         (x, y),
                         10
                     )
+                    print(drone[turn].name, object.name)
 
         for drone in sim_output:
             if drone[turn] != graph.start and drone[turn] != drone[turn - 1]:
