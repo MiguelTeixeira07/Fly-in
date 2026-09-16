@@ -1,4 +1,5 @@
 import sys
+from typing import Union
 
 
 class Fly_In:
@@ -38,9 +39,10 @@ class Fly_In:
         from parsing import Parse, ParsingError
 
         try:
-            data: list[int | Parse.Hub | Parse.Connection] = Parse.main_parser(
-                sys.argv[1]
-            )
+            data: list[Union[int, 'Parse.Hub', 'Parse.Connection']] = \
+                Parse.main_parser(
+                    sys.argv[1]
+                )
         except ParsingError as e:
             print(e)
             return
@@ -81,7 +83,7 @@ class Fly_In:
         )
 
         if not Graph.graph_is_connected(graph):
-            print('Map contains isolated hubs')
+            print('No possible path from start to end')
             return
 
         from gui import Gui
@@ -91,4 +93,7 @@ class Fly_In:
 
 
 if __name__ == '__main__':
-    Fly_In.main()
+    try:
+        Fly_In.main()
+    except KeyboardInterrupt:
+        sys.exit(0)

@@ -152,7 +152,6 @@ class Gui:
                         (x, y),
                         10
                     )
-                    print(drone[turn].name, object.name)
 
         for drone in sim_output:
             if drone[turn] != graph.start and drone[turn] != drone[turn - 1]:

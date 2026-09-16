@@ -241,7 +241,7 @@ class Graph:
             connection.drones_passed = 0
 
     @staticmethod
-    def graph_is_connected(graph: Graph) -> bool:
+    def graph_is_connected(graph: 'Graph') -> bool:
         """Checks whether every node in the graph is reachable from the start.
 
         Performs a depth-first traversal from the graph's start node
@@ -266,10 +266,10 @@ class Graph:
 
             for connection in node.connections:
                 candidate: 'Graph.Node' = connection.get_opposite_node(node)
-                if candidate not in visited:
+                if candidate not in visited and candidate.weight != 3:
                     stack.append(candidate)
 
-        return len(set(reached_nodes)) == len(graph.nodes)
+        return graph.goal in set(reached_nodes)
 
     def normalize_coords(self) -> 'Graph':
         """Normalizes node coordinates to start at (0, 0) and flips the Y axis.

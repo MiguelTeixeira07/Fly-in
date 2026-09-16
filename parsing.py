@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Optional as Opt, TextIO
+from typing import Optional as Opt, TextIO, Union
 
 
 class ParsingError(Exception):
@@ -138,7 +138,7 @@ class Parse:
     def main_parser(
         cls,
         file_name: str
-    ) -> list[int | 'Parse.Hub' | 'Parse.Connection']:
+    ) -> list[Union[int, 'Parse.Hub', 'Parse.Connection']]:
         """Parses a map file into a list of drone count, hubs, and connections.
 
         Opens the file to check it exists and is readable, then reads it
@@ -175,7 +175,7 @@ class Parse:
             str,
             Callable[
                 [str, int],
-                int | 'Parse.Hub' | 'Parse.Connection'
+                Union[int, 'Parse.Hub', 'Parse.Connection']
             ]
         ] = {
             'nb_drones': lambda line, _: cls.parse_nb_drones(line),
@@ -184,7 +184,7 @@ class Parse:
             'hub': cls.general_parse,
             'connection': cls.connection_parse
         }
-        output: list[int | 'Parse.Hub' | 'Parse.Connection'] = []
+        output: list[Union[int, 'Parse.Hub', 'Parse.Connection']] = []
 
         line_nbr: int = 0
         i: int = 0
@@ -493,11 +493,17 @@ class Parse:
         ):
             return (False, 'Invalid coordinates')
 
-        if start_end and 'max_drones' in line:
-            return (
-                False,
-                'Start and end hubs must have unlimited drone capacity'
-            )
+        if start_end:
+            if 'max_drones' in line:
+                return (
+                    False,
+                    'Start and end hubs must have unlimited drone capacity'
+                )
+            if 'zone' in line and 'blocked' in line:
+                return (
+                    False,
+                    'Start or end hubs must not be blocked zones'
+                )
 
         return (True, '')
 
@@ -571,7 +577,7 @@ class Parse:
 
     @staticmethod
     def check_output_validity(
-        output: list[int | 'Parse.Hub' | 'Parse.Connection']
+        output: list[Union[int, 'Parse.Hub', 'Parse.Connection']]
     ) -> tuple[bool, str]:
         """Validates the fully parsed contents of a map file.
 

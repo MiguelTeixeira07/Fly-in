@@ -174,7 +174,7 @@ class Solution:
         return weight_sum
 
     @staticmethod
-    def path(graph: Graph) -> Solution.Path:
+    def path(graph: Graph) -> 'Solution.Path':
         """Finds every minimum-weight route from start to goal and merges them
         into a tree.
 
