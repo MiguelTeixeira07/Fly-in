@@ -45,7 +45,7 @@ class Gui:
 
         sim_output: list[
             list[
-                Graph.Node | Graph.Connection
+                int | Graph.Node | Graph.Connection
             ]
         ] = Simulation.start(graph, n_drones)
 
@@ -55,7 +55,7 @@ class Gui:
 
         pygame.display.flip()
 
-        index = 0
+        index = 1
 
         running: bool = True
         current_time: int = 0
@@ -78,7 +78,7 @@ class Gui:
     def draw_graph(
         cls,
         graph: Graph,
-        sim_output: list[list[Graph.Node | Graph.Connection]],
+        sim_output: list[list[int | Graph.Node | Graph.Connection]],
         turn: int
     ) -> None:
         """Draws the graph and drone positions for a single simulation step.
@@ -145,18 +145,20 @@ class Gui:
                     pygame.draw.circle(
                         cls.screen,
                         (
-                            10*sim_output.index(drone),
-                            0*sim_output.index(drone),
-                            0*sim_output.index(drone)
+                            int(255/len(sim_output)*sim_output.index(drone)),
+                            0,
+                            0
                         ),
                         (x, y),
                         10
                     )
 
+        curr_pos: int | Graph.Node | Graph.Connection = sim_output[1][turn]
         for drone in sim_output:
-            if drone[turn] != graph.start and drone[turn] != drone[turn - 1]:
-                print(f'D{sim_output.index(drone) + 1}'
-                      f'-{drone[turn].name}', end=' ')
+            if drone[turn] != graph.start and curr_pos != drone[turn - 1]:
+                print(f'D{sim_output.index(drone) + 1}', end='')
+                if not isinstance(curr_pos, int):
+                    print(f'-{curr_pos.name}', end=' ')
 
         pygame.display.flip()
 

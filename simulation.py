@@ -74,7 +74,7 @@ class Simulation:
         cls,
         graph: Graph,
         n_drones: int
-    ) -> list[list[Graph.Node | Graph.Connection]]:
+    ) -> list[list[int | Graph.Node | Graph.Connection]]:
         """Runs the full simulation from start to finish.
 
         Computes the minimum-weight path tree for the graph, creates
@@ -106,9 +106,9 @@ class Simulation:
 
         output: list[
             list[
-                Graph.Node | Graph.Connection
+                int | Graph.Node | Graph.Connection
             ]
-        ] = [[] for _ in cls.drones]
+        ] = [[drone.number] for drone in cls.drones]
 
         for drone in cls.drones:
             drone.location = path.root

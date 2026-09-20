@@ -271,7 +271,7 @@ class Graph:
 
         return graph.goal in set(reached_nodes)
 
-    def normalize_coords(self) -> 'Graph':
+    def normalize_coords(self) -> None:
         """Normalizes node coordinates to start at (0, 0) and flips the Y axis.
 
         Shifts every node's position so that the minimum x and y values
@@ -290,23 +290,6 @@ class Graph:
             if node.pos[1] < min_y:
                 min_y = node.pos[1]
 
-        if min_x < 0:
-            for node in self.nodes:
-                node.pos[0] += abs(min_x)
-        if min_x > 0:
-            for node in self.nodes:
-                node.pos[0] -= min_x
-
-        if min_y < 0:
-            for node in self.nodes:
-                node.pos[1] += abs(min_y)
-        if min_y > 0:
-            for node in self.nodes:
-                node.pos[1] -= min_y
-
         for node in self.nodes:
-            node.pos[1] = abs(
-                max(node.pos[1] for node in self.nodes) - node.pos[1]
-            )
-
-        return self
+            node.pos[0] -= min_x
+            node.pos[1] -= min_y
