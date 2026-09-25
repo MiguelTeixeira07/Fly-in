@@ -1,7 +1,11 @@
 import pygame
 import time
 from typing import Any
+from collections.abc import Callable
 from graph import Graph
+from enum import Enum
+
+
 
 
 class Gui:
@@ -13,9 +17,32 @@ class Gui:
 
     Attributes:
         screen (Any): Active pygame display surface.
+        COLORS (dict[str, tuple[int, int, int]]): List of colors
     """
 
     screen: Any
+
+    COLORS: dict[str, tuple[int, int, int]] = {
+        "white": (255, 255, 255),
+        "black": (0, 0, 0),
+        "gray": (127, 127, 127),
+        "red": (255, 0, 0),
+        "green": (0, 255, 0),
+        "blue": (0, 0, 255),
+        "yellow": (255, 255, 0),
+        "purple": (255, 0, 255),
+        "cyan": (0, 255, 255),
+        "orange": (255, 165, 0),
+        "brown": (150, 75, 0),
+        "maroon": (85, 0, 0),
+        "darkred": (140, 0, 0),
+        "violet": (127, 0, 255),
+        "crimson": (178, 34, 34),
+        "gold": (239, 192, 4),
+        "default": (255, 255, 255)
+    }
+
+    DEFAULT_COLOR: tuple[int, int, int] = (255, 255, 255)
 
     @classmethod
     def run(
@@ -138,7 +165,12 @@ class Gui:
             x = (1200 / scale[0]) * x_pos + 1200 / (scale[0] * 2)
             y = (800 / scale[1]) * y_pos + 800 / (scale[1] * 2)
             if isinstance(object, Graph.Node):
-                pygame.draw.circle(cls.screen, (255, 125, 0), (x, y), 15)
+                pygame.draw.circle(
+                    cls.screen,
+                    cls.COLORS.get(object.color, cls.DEFAULT_COLOR),
+                    (x, y),
+                    15
+                )
 
             for drone in sim_output:
                 if drone[turn] == object:
@@ -153,7 +185,7 @@ class Gui:
                         10
                     )
 
-        curr_pos: int | Graph.Node | Graph.Connection = sim_output[1][turn]
+        curr_pos: int | Graph.Node | Graph.Connection = sim_output[0][turn]
         for drone in sim_output:
             if drone[turn] != graph.start and curr_pos != drone[turn - 1]:
                 print(f'D{sim_output.index(drone) + 1}', end='')

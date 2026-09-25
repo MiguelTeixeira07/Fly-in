@@ -28,6 +28,7 @@ class Graph:
                 this node.
             max_drones (int): Maximum number of drones the node can
                 hold at once.
+            color (str): Node color
         """
 
         def __init__(
@@ -35,7 +36,8 @@ class Graph:
             name: str,
             zone_type: str,
             pos: tuple[int, int],
-            max_drones: int
+            max_drones: int,
+            color: str
         ) -> None:
             """Initializes a node.
 
@@ -47,6 +49,7 @@ class Graph:
                 pos (tuple[int, int]): (x, y) position of the node.
                 max_drones (int): Maximum number of drones the node can
                     hold at once.
+                color (str): Node color
             """
             from simulation import Simulation
 
@@ -63,12 +66,10 @@ class Graph:
                     self.weight = 3
 
             self.pos: list[int] = list(pos)
-
             self.connections: list['Graph.Connection'] = []
-
             self.drones: list[Simulation.Drone] = []
-
             self.max_drones: int = max_drones
+            self.color: str = color
 
     class Connection:
         """A single connection (edge) between two nodes in the graph.
@@ -135,7 +136,8 @@ class Graph:
         start: str,
         goal: str,
         positions: list[tuple[int, int]],
-        max_drones_l: list[int]
+        max_drones_l: list[int],
+        colors: list[str]
     ) -> None:
         """Builds a graph from parsed map data.
 
@@ -145,28 +147,30 @@ class Graph:
 
         Args:
             names (list[str]): Names of every hub.
-            zone_types (list[str]): Zone type of every hub, in the same
-                order as `names`.
-            connections (list[tuple[str, int]]): Connection name/max
-                capacity pairs, where the name is formatted as
-                '<node1>-<node2>'.
+            zone_types (list[str]): Zone type of every hub, in the same order
+                as `names`.
+            connections (list[tuple[str, int]]): Connection name/max capacity
+                pairs, where the name is formatted as '<node1>-<node2>'.
             start (str): Name of the start hub.
             goal (str): Name of the goal hub.
-            positions (list[tuple[int, int]]): (x, y) position of every
-                hub, in the same order as `names`.
-            max_drones_l (list[int]): Maximum drone capacity of every
-                hub, in the same order as `names`.
+            positions (list[tuple[int, int]]): (x, y) position of every hub,
+                in the same order as `names`.
+            max_drones_l (list[int]): Maximum drone capacity of every hub, in
+                the same order as `names`.
+            colors (list[str]): Color of every hub, in the same order as
+                `names`.
         """
         self.nodes: list['Graph.Node'] = []
         self.connections: list['Graph.Connection'] = []
 
-        for name, zone_type, max_drones, pos in zip(
+        for name, zone_type, max_drones, pos, color in zip(
             names,
             zone_types,
             max_drones_l,
-            positions
+            positions,
+            colors
         ):
-            new_node = Graph.Node(name, zone_type, pos, max_drones)
+            new_node = Graph.Node(name, zone_type, pos, max_drones, color)
             self.nodes.append(new_node)
 
         self.normalize_coords()

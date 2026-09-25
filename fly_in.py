@@ -52,6 +52,7 @@ class Fly_In:
         max_drones: list[int] = []
         connections: list[tuple[str, int]] = []
         positions: list[tuple[int, int]] = []
+        colors: list[str] = []
 
         for element in data[0:]:
             if isinstance(element, Parse.Hub):
@@ -59,6 +60,7 @@ class Fly_In:
                 zone_types.append(element.zone_type)
                 max_drones.append(element.max_drones)
                 positions.append((element.x_pos, element.y_pos))
+                colors.append(element.color)
                 if element.is_start:
                     start: str = element.name
                     if isinstance(data[0], int):
@@ -79,7 +81,8 @@ class Fly_In:
             start,
             goal,
             positions,
-            max_drones
+            max_drones,
+            colors
         )
 
         if not Graph.graph_is_connected(graph):

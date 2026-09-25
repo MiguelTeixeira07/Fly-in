@@ -73,20 +73,11 @@ class Parse:
             """
             self.name: str = name
             self.x_pos, self.y_pos = coords
-            self.is_start = False
-            self.is_goal = False
-            self.zone_type: str = 'normal'
-            self.max_drones: int = 1
-
-            if 'zone' in metadata.keys():
-                self.zone_type = str(metadata['zone'])
-            if 'max_drones' in metadata.keys():
-                self.max_drones = int(metadata['max_drones'])
-
-            if is_start:
-                self.is_start = True
-            if is_goal:
-                self.is_goal = True
+            self.is_start = is_start
+            self.is_goal = is_goal
+            self.zone_type: str = str(metadata.get('zone', 'normal'))
+            self.max_drones: int = int(metadata.get('max_drones', 1))
+            self.color = metadata.get('color')
 
     class Connection:
         """A single connection (edge) parsed from the map file.
@@ -333,15 +324,11 @@ class Parse:
         split_metadata: list[str] = raw_metadata.split(' ')
         metadata: dict[str, str | int] = {}
 
-        repeat: bool = False
         for data in split_metadata:
             tag, value = data.split('=')
 
             if tag not in cls.METADATA:
                 raise ParsingError('Invalid tag in metadata')
-
-            if tag in metadata:
-                raise ParsingError('Duplicated tag in metadata')
 
             match tag:
                 case 'zone':
@@ -366,13 +353,10 @@ class Parse:
                         print(f'Invalid syntax in line {line_nbr}:', end=' ')
                         raise ParsingError('Invalid ammount of drones')
                 case 'color':
-                    if repeat:
-                        print(f'Invalid syntax in line {line_nbr}:', end=' ')
-                        raise ParsingError('Duplicated tag in metadata')
-                    repeat = True
                     if not value.isalpha():
                         print(f'Invalid syntax in line {line_nbr}:', end=' ')
                         raise ParsingError('Invalid color')
+                    metadata[tag] = value
 
         return metadata
 
@@ -405,7 +389,7 @@ class Parse:
             'connection': Parse.validate_connection
         }
         if not line[0].isalpha():
-            return (False, 'Invalid character in start of line')
+            return (False, f'Invalid character in start of line: "{line[0]}"')
         allowed_chars: str = ' -:[]_=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN'
         allowed_chars += 'OPQRSTUVWXYZ0123456789\n'
         test_line: str = line
@@ -555,6 +539,7 @@ class Parse:
         """
         index: int = 0
         metadata_start: Opt[int] = None
+        used_tokens: list[str] = []
         for token in line.split():
             if '[' in token:
                 metadata_start = index
@@ -572,6 +557,10 @@ class Parse:
         for token in line.split()[metadata_start:]:
             if token.count('=') != 1:
                 return (False, 'Invalid use of "=" in metadata')
+            tag = token.split('=')[0].strip('[')
+            if tag in used_tokens:
+                return (False, f'Duplicate metadata tag "{tag}"')
+            used_tokens.append(tag)
 
         return (True, '')
 
